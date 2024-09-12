@@ -7,28 +7,34 @@
 # create_crawling_data: crawling_data 테이블에 데이터를 추가합니다.
 
 from sqlalchemy.orm import Session
-from app import models
+from models import *
 
 # 단지기본 정보 생성 함수
 def create_apartment_complex_basic(db: Session, complex_data):
-    db_complex = models.ApartmentComplexBasic(**complex_data)
+    db_complex = ApartmentComplexBasic(**complex_data)
     db.add(db_complex)
     db.commit()
     db.refresh(db_complex)
     return db_complex
 
-# 단지상세 정보 생성 함수
-def create_apartment_complex_details(db: Session, details_data):
-    db_details = models.ApartmentComplexDetails(**details_data)
-    db.add(db_details)
-    db.commit()
-    db.refresh(db_details)
-    return db_details
+# 단지기본 table select 함수
+def select_apartment_complex_basic(db: Session):
+    result = db.query(ApartmentComplexBasic).all()
+    print(result)
+    return result
 
-# 크롤링 데이터 생성 함수
-def create_crawling_data(db: Session, crawling_data):
-    db_crawl = models.CrawlingData(**crawling_data)
-    db.add(db_crawl)
-    db.commit()
-    db.refresh(db_crawl)
-    return db_crawl
+# # 단지상세 정보 생성 함수
+# def create_apartment_complex_details(db: Session, details_data):
+#     db_details = ApartmentComplexDetails(**details_data)
+#     db.add(db_details)
+#     db.commit()
+#     db.refresh(db_details)
+#     return db_details
+
+# # 크롤링 데이터 생성 함수
+# def create_crawling_data(db: Session, crawling_data):
+#     db_crawl = CrawlingData(**crawling_data)
+#     db.add(db_crawl)
+#     db.commit()
+#     db.refresh(db_crawl)
+#     return db_crawl

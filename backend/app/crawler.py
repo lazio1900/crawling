@@ -86,6 +86,7 @@ def crawl_complex_info(complex_id):
     complex_width = all_width_make(driver)
 
     info_result[complex_id] = {
+        "complex_id": complex_id,
         "complex_name": complex_name_str,
         "complex_num": complex_num_str,
         "complex_company": complex_company_str,

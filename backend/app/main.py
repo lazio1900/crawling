@@ -1,17 +1,11 @@
-##### main.py
-### FastAPI 설정
-### 이 파일은 FastAPI 애플리케이션을 설정하고, API 엔드포인트를 정의합니다.
-
-# Base.metadata.create_all(bind=engine): 데이터베이스 테이블을 생성합니다.
-# app = FastAPI(): FastAPI 애플리케이션을 생성합니다.
-# API 엔드포인트: 데이터베이스에 데이터를 추가하는 API를 정의합니다.
-# get, post, patch, put, delete
+from datetime import datetime
 
 from fastapi import FastAPI, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import engine, Base, get_db
 from crawler import SIMPJT_crawling, crawl_complex_info
+from crud import *
 
 # 데이터베이스 테이블 생성
 Base.metadata.create_all(bind=engine)
@@ -34,27 +28,55 @@ def complex_info_search(complex_id: dict, db: Session = Depends(get_db)):
     search_res = crawl_complex_info(complex_id["complexId"])
     return search_res
 
+# 크롤링한 apply 정보를 받는 엔드포인트
+@app.post("/complex_apply/")
+def complex_info_apply(complex_info: dict, db: Session = Depends(get_db)):
+    print(complex_info)
 
+    complex_info['user_registration_date'] = datetime.now()
+    complex_id = complex_info['complex_id']
+    complex_info['url'] = f"https://new.land.naver.com/complexes/{complex_id}?ms=37.498319,127.0413807,16&a=APT:PRE:ABYG:JGC&e=RETAIL&ad=true"
+    complex_info['usage_status'] = "Y"
 
-# apartment_complex_basic Table 생성
-@app.post("/apartment-complex/")
-def create_apartment_complex(complex_data: dict, db: Session = Depends(get_db)):
-    print(complex_data["complexId"])
-    # cralwing
-    return {"message": "굳"}
+    search_res = create_apartment_complex_basic(db, complex_info)
 
-# apartment_complex_details Table 생성
-@app.post("/apartment-complex/details/")
-def create_apartment_complex_details(details_data: dict, db: Session = Depends(get_db)):
-    return 
+    
+    return search_res
 
-# create_crawling_data Table 생성
-@app.post("/crawling-data/")
-def create_crawling_data(crawling_data: dict, db: Session = Depends(get_db)):
-    return
+# 저정한 단지 Table을 랜더링 하는 엔드포인트
+@app.post("/complex_list/")
+def complex_info_list(db: Session = Depends(get_db)):
+    return select_apartment_complex_basic(db)
 
-# crawl 실행
-@app.post("/crawl/")
-def trigger_crawling(url: str, background_tasks: BackgroundTasks):
-    background_tasks.add_task(SIMPJT_crawling, url)
-    return {"message": "Crawling started in the background"}
+# 크롤링 결과, 설정 및 시각화 페이지 엔드포인트
+# @app.post("/complex_crawl_basic/")
+# def crawl_page_basic(단지ID, db: Session = Depends(get_db)):
+#     단지명
+#     단지ID
+#     최종크롤링 일자
+#     단지ID의 히스토리 테이블
+#     주기설정(매일, 매주, 매월 설정 가능)
+#     return select_apartment_complex_basic(db)
+
+# # apartment_complex_basic Table 생성
+# @app.post("/apartment-complex/")
+# def create_apartment_complex(complex_data: dict, db: Session = Depends(get_db)):
+#     print(complex_data["complexId"])
+#     # cralwing
+#     return {"message": "굳"}
+
+# # apartment_complex_details Table 생성
+# @app.post("/apartment-complex/details/")
+# def create_apartment_complex_details(details_data: dict, db: Session = Depends(get_db)):
+#     return 
+
+# # create_crawling_data Table 생성
+# @app.post("/crawling-data/")
+# def create_crawling_data(crawling_data: dict, db: Session = Depends(get_db)):
+#     return
+
+# # crawl 실행
+# @app.post("/crawl/")
+# def trigger_crawling(url: str, background_tasks: BackgroundTasks):
+#     background_tasks.add_task(SIMPJT_crawling, url)
+#     return {"message": "Crawling started in the background"}

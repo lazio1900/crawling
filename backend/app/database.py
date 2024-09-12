@@ -12,7 +12,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # PostgreSQL 데이터베이스 URL 설정
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:1234@localhost/postgres"
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:6454@localhost/postgres"
 
 # 데이터베이스 엔진 생성
 engine = create_engine(SQLALCHEMY_DATABASE_URL) 
