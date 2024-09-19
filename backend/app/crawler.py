@@ -42,7 +42,7 @@ def make_url(complex_id):
     url = f"https://new.land.naver.com/complexes/{complex_id}?ms=37.498319,127.0413807,16&a=APT:PRE:ABYG:JGC&e=RETAIL&ad=true"
     return url
 
-# 단지 검색용 정보(단지명, 세대수, 건설사, 주소, 평수)
+# 단지 검색용 크롤링 (단지명, 세대수, 건설사, 주소, 평수)
 def crawl_complex_info(complex_id):
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")
@@ -98,7 +98,89 @@ def crawl_complex_info(complex_id):
 
     return info_result
 
+# 단지별 디테일 크롤링 (평수별 매매 수 등)
+def crawl_widthes_sales_info(complex_id):
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.114 Safari/537.36")
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
+    options.add_experimental_option("useAutomationExtension", False)
 
+    # 크롤링 메타 정보부터 만들기
+    crawl_meta_result = {}
+    
+    crawl_meta_result[complex_id] = {
+        "crawling_id": 1,
+        "execution_date": datetime.now(),
+        "complex_id": complex_id,
+        "status": 'success',
+        "attempt_count": 1,
+    }
+
+    # 평수별 매매 수 등 정보 크롤링
+    detail_result = {}
+
+    url = make_url(complex_id)
+
+    driver = webdriver.Chrome(options=options)
+    # driver = webdriver.Chrome()
+    driver.get(url)
+    time.sleep(5)
+
+    # 단지정보 열기
+    complex_btn = driver.find_element(By.CLASS_NAME, 'complex_link')
+    complex_btn.click()
+    time.sleep(1)
+
+    # 평수 목록
+    complex_width = all_width_make(driver)
+
+    # 평수 만큼 정보 크롤링 반복
+    width_sales_res = {}
+    for idx, complex_width in enumerate(complex_width):
+
+        tab_num = "tab" + str(idx)
+        width_btn = driver.find_element(By.XPATH, f'//*[@id={tab_num}]/span')
+        width_btn.click()
+            
+        # 매매 수
+        sales_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[1]/span')
+        sales_count_str = sales_count.text
+
+        # 전세 수
+        lease_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[2]/span')
+        lease_count_str = lease_count.text
+        
+        # 월세 수
+        monthly_rent_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[3]/span')
+        monthly_rent_count_str = monthly_rent_count.text
+
+        # 단기 수
+        short_term_rent_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[4]/span')
+        short_term_rent_count_str = short_term_rent_count.text
+
+        width_sales_res = {
+            "complex_width": complex_width,
+            "sales_count": sales_count_str,
+            "lease_count": lease_count_str,
+            "monthly_rent_count": monthly_rent_count_str,
+            "short_term_rent_count": short_term_rent_count_str,            
+
+        }
+
+    detail_result[complex_id] = {
+        "complex_id": complex_id,
+        "complex_name": complex_name_str,
+        "complex_num": complex_num_str,
+        "complex_company": complex_company_str,
+        "complex_addr": complex_addr_str,
+        "complex_width": complex_width
+    }
+
+    driver.quit()
+
+    return crawl_meta_result, detail_result
 
 
 # main 크롤링 코드
