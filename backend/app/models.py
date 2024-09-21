@@ -55,3 +55,4 @@ class CrawlingData(Base):
     attempt_count = Column(Integer)
 
     complex = relationship("ApartmentComplexBasic", back_populates="crawls")
+    details = relationship("ApartmentComplexDetails", back_populates="crawls")

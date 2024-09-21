@@ -2,6 +2,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException, WebDriverException, ElementClickInterceptedException
 import time
 import re
 from sqlalchemy.orm import Session
@@ -111,11 +112,10 @@ def crawl_widthes_sales_info(complex_id):
     crawl_meta_result = {}
     
     crawl_meta_result[complex_id] = {
-        "crawling_id": 1,
         "execution_date": datetime.now(),
         "complex_id": complex_id,
-        "status": 'success',
-        "attempt_count": 1,
+        "status": 'pending',
+        "attempt_count": 0,
     }
 
     # 평수별 매매 수 등 정보 크롤링
@@ -123,62 +123,75 @@ def crawl_widthes_sales_info(complex_id):
 
     url = make_url(complex_id)
 
-    driver = webdriver.Chrome(options=options)
-    # driver = webdriver.Chrome()
-    driver.get(url)
-    time.sleep(5)
+    success = False  # 성공 여부를 추적
 
-    # 단지정보 열기
-    complex_btn = driver.find_element(By.CLASS_NAME, 'complex_link')
-    complex_btn.click()
-    time.sleep(1)
+    for attempt in range(1, 4):
+        try:
+            crawl_meta_result[complex_id]["attempt_count"] = attempt
+            driver = webdriver.Chrome(options=options)
+            # driver = webdriver.Chrome()
+            driver.get(url)
+            time.sleep(5)
 
-    # 평수 목록
-    complex_width = all_width_make(driver)
+            # 단지정보 열기
+            complex_btn = driver.find_element(By.CLASS_NAME, 'complex_link')
+            complex_btn.click()
+            time.sleep(1)
 
-    # 평수 만큼 정보 크롤링 반복
-    width_sales_res = {}
-    for idx, complex_width in enumerate(complex_width):
+            # 평수 목록
+            complex_width = all_width_make(driver)
 
-        tab_num = "tab" + str(idx)
-        width_btn = driver.find_element(By.XPATH, f'//*[@id={tab_num}]/span')
-        width_btn.click()
-            
-        # 매매 수
-        sales_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[1]/span')
-        sales_count_str = sales_count.text
+            # 평수 만큼 정보 크롤링 반복
+            width_sales_res = {}
+            for idx, complex_width_ in enumerate(complex_width):
 
-        # 전세 수
-        lease_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[2]/span')
-        lease_count_str = lease_count.text
+                tab_num = "tab" + str(idx)
+                width_btn = driver.find_element(By.XPATH, f'//*[@id="{tab_num}"]/span')
+                width_btn.click()
+                    
+                # 매매 수
+                sales_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[1]/span')
+                sales_count_str = sales_count.text
+
+                # 전세 수
+                lease_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[2]/span')
+                lease_count_str = lease_count.text
+                
+                # 월세 수
+                monthly_rent_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[3]/span')
+                monthly_rent_count_str = monthly_rent_count.text
+
+                # 단기 수
+                short_term_rent_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[4]/span')
+                short_term_rent_count_str = short_term_rent_count.text
+
+                width_sales_res[complex_width_] = {
+                    "complex_width": complex_width,
+                    "sales_count": sales_count_str,
+                    "lease_count": lease_count_str,
+                    "monthly_rent_count": monthly_rent_count_str,
+                    "short_term_rent_count": short_term_rent_count_str,            
+
+                }
+                
+            # 크롤링이 성공했을 경우
+            success = True
+            detail_result = width_sales_res
+            crawl_meta_result[complex_id]["status"] = "success"
+            break  # 성공했으므로 반복 종료
+
+        except (NoSuchElementException, WebDriverException, ElementClickInterceptedException) as e:
+            print(f"에러 발생: {e}")
+            # 에러 발생 시에도 계속 시도
+
         
-        # 월세 수
-        monthly_rent_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[3]/span')
-        monthly_rent_count_str = monthly_rent_count.text
+        finally:
+            if driver:
+                driver.quit()
 
-        # 단기 수
-        short_term_rent_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[4]/span')
-        short_term_rent_count_str = short_term_rent_count.text
-
-        width_sales_res = {
-            "complex_width": complex_width,
-            "sales_count": sales_count_str,
-            "lease_count": lease_count_str,
-            "monthly_rent_count": monthly_rent_count_str,
-            "short_term_rent_count": short_term_rent_count_str,            
-
-        }
-
-    detail_result[complex_id] = {
-        "complex_id": complex_id,
-        "complex_name": complex_name_str,
-        "complex_num": complex_num_str,
-        "complex_company": complex_company_str,
-        "complex_addr": complex_addr_str,
-        "complex_width": complex_width
-    }
-
-    driver.quit()
+        # 3회 시도 후에도 실패한 경우
+    if not success:
+        crawl_meta_result[complex_id]["status"] = "failed"
 
     return crawl_meta_result, detail_result
 
