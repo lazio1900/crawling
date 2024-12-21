@@ -4,8 +4,9 @@ from fastapi import FastAPI, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import engine, Base, get_db
-from crawler import SIMPJT_crawling, crawl_complex_info
+from crawler import SIMPJT_crawling, crawl_complex_info, crawl_widthes_sales_info
 from crud import *
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # 데이터베이스 테이블 생성
 Base.metadata.create_all(bind=engine)
@@ -47,6 +48,40 @@ def complex_info_apply(complex_info: dict, db: Session = Depends(get_db)):
 @app.post("/complex_list/")
 def complex_info_list(db: Session = Depends(get_db)):
     return select_apartment_complex_basic(db)
+
+### 단지 디테일 스케줄 기능 추가
+# 단지 디테일 크롤링 결과 저장
+def comp_detail_crawl_job():
+    gen = get_db()
+    db = gen.__next__()
+    print("get_db ok")
+    # 보유한 단지 단지번호 가져오기
+    comps = select_apartment_complex_basic(db)
+    print("comps 가져오는 중")
+    print(comps)
+
+    for comp in comps:
+        # 단지 디테일 크롤링 및 DB add
+        print("comp detail 진행중")
+        _, detail_res = crawl_widthes_sales_info(comp.complex_id)
+        print("detail_res : ", detail_res)
+        add_detail_complexes(db, detail_res)
+
+# 스케줄 객체 생성
+sched = BackgroundScheduler(timezone='Asia/Seoul')  # 시간대 설정
+
+sched.add_job(
+    comp_detail_crawl_job,
+    'cron',
+    day_of_week='sat',
+    hour='17',
+    minute='20',
+    id='test'
+)  # 매주 금요일 수행
+sched.start() #스케쥴링 작업 실행
+
+
+
 
 # 크롤링 결과, 설정 및 시각화 페이지 엔드포인트
 # @app.post("/complex_crawl_basic/")

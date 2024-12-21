@@ -23,6 +23,12 @@ def select_apartment_complex_basic(db: Session):
     print(result)
     return result
 
+# 단지 디테일 저장 함수
+def add_detail_complexes(db: Session, detail_res):
+    db_detail_complex = [ApartmentComplexDetails(**detail) for detail in detail_res]
+    db.add_all(db_detail_complex)
+    db.commit()
+
 # # 단지상세 정보 생성 함수
 # def create_apartment_complex_details(db: Session, details_data):
 #     db_details = ApartmentComplexDetails(**details_data)

@@ -142,7 +142,7 @@ def crawl_widthes_sales_info(complex_id):
             complex_width = all_width_make(driver)
 
             # 평수 만큼 정보 크롤링 반복
-            width_sales_res = {}
+            width_sales_res = []
             for idx, complex_width_ in enumerate(complex_width):
 
                 tab_num = "tab" + str(idx)
@@ -165,14 +165,15 @@ def crawl_widthes_sales_info(complex_id):
                 short_term_rent_count = driver.find_element(By.XPATH, '//*[@id="tabpanel"]/table/tbody/tr[5]/td/a[4]/span')
                 short_term_rent_count_str = short_term_rent_count.text
 
-                width_sales_res[complex_width_] = {
-                    "complex_width": complex_width,
+                width_sales_res.append(
+                    {
+                    "complex_id": complex_id,
+                    "complex_width": complex_width_,
                     "sales_count": sales_count_str,
                     "lease_count": lease_count_str,
                     "monthly_rent_count": monthly_rent_count_str,
                     "short_term_rent_count": short_term_rent_count_str,            
-
-                }
+                    })
                 
             # 크롤링이 성공했을 경우
             success = True
